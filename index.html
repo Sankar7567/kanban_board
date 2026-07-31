@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuestBoard - Gamified Kanban & Task Tracker</title>
+  
+  <!-- PWA Capabilities -->
+  <meta name="theme-color" content="#8b5cf6">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="QuestBoard">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22QuestBoard%20Gamified%20Kanban%22%2C%22short_name%22%3A%22QuestBoard%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23020617%22%2C%22theme_color%22%3A%22%238b5cf6%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%252520xmlns%25253D%252522http%25253A%25252F%25252Fwww.w3.org%25252F2000%25252Fsvg%252522%252520viewBox%25253D%2525220%2525200%252520100%252520100%252522%25253E%25253Crect%252520width%25253D%252522100%252522%252520height%25253D%252522100%252522%252520rx%25253D%25252220%252522%252520fill%25253D%252522url(%252523g)%252522%25253E%25253C%25252Frect%25253E%25253Cdefs%25253E%25253ClinearGradient%252520id%25253D%252522g%252522%252520x1%25253D%2525220%252522%252520y1%25253D%2525220%252522%252520x2%25253D%2525221%252522%252520y2%25253D%2525221%252522%25253E%25253Cstop%252520stop-color%25253D%252522%2525238b5cf6%252522%25253E%25253C%25252Fstop%25253E%25253Cstop%252520offset%25253D%2525221%252522%252520stop-color%25253D%252522%2525236366f1%252522%25253E%25253C%25252Fstop%25253E%25253C%25252FlinearGradient%25253E%25253C%25252Fdefs%25253E%25253Cpath%252520d%25253D%252522M30%25252025%252520L75%25252045%252520L50%25252055%252520L30%25252025%252520Z%252522%252520fill%25253D%252522white%252522%25253E%25253C%25252Fpath%25253E%25253C%25252Fsvg%25253E%252522%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+  <!-- Outfit Font: local offline copy -->
+  <link href="assets/fonts.css" rel="stylesheet">
+
+  <!-- Tailwind CSS: local offline copy -->
+  <script src="assets/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              300: '#c4b5fd',
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              800: '#5b21b6',
+              900: '#4c1d95',
+              950: '#1e1b4b',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Lucide Icons: local offline copy -->
+  <script src="assets/lucide.min.js"></script>
+
+  <!-- Canvas Confetti: local offline copy -->
+  <script src="assets/confetti.min.js"></script>
+
+  <!-- SortableJS: local offline copy -->
+  <script src="assets/sortable.min.js"></script>
+
+  <style>
+    /* Glassmorphism utility */
+    .glass {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    
+    .dark .glass {
+      background: rgba(15, 23, 42, 0.65);
+    }
+
+    /* Custom Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(139, 92, 246, 0.2);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(139, 92, 246, 0.4);
+    }
+
+    /* Custom glow animations */
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 15px rgba(139, 92, 246, 0.15);
+      }
+      50% {
+        box-shadow: 0 0 25px rgba(139, 92, 246, 0.45);
+      }
+    }
+    .glow-active {
+      animation: pulse-glow 3s infinite;
+    }
+
+    /* Card sorting animations placeholder */
+    .sortable-ghost {
+      opacity: 0.3;
+      transform: scale(0.95);
+      border: 2px dashed #8b5cf6 !important;
+    }
+    .sortable-drag {
+      opacity: 0.9;
+      transform: rotate(2deg);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300 font-sans">
+  <!-- Layout Wrapper -->
+  <div class="flex flex-col lg:flex-row min-h-screen w-full relative">
+    
+    <!-- Mobile Sidebar Trigger Header -->
+    <header class="lg:hidden w-full flex items-center justify-between p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-30 transition-colors">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+          <i data-lucide="swords" class="w-5 h-5"></i>
+        </div>
+        <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-brand-550 from-brand-500 to-indigo-500 dark:from-brand-400 dark:to-indigo-400 bg-clip-text text-transparent">QuestBoard</span>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button id="mobile-menu-btn" class="p-2 text-slate-550 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Sidebar Backcloth (Mobile) -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity lg:hidden"></div>
+
+    <!-- Sidebar (Left) -->
+    <aside id="sidebar" class="fixed lg:static top-0 left-0 bottom-0 w-80 glass border-r border-slate-200 dark:border-slate-800/80 z-50 flex flex-col h-screen transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+      
+      <!-- Logo Section -->
+      <div class="p-6 border-b border-slate-200 dark:border-slate-800/50 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+            <i data-lucide="swords" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h1 class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-brand-600 to-indigo-650 dark:from-brand-400 dark:to-indigo-400 bg-clip-text text-transparent">QuestBoard</h1>
+            <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold tracking-wider uppercase">Gamified Kanban</span>
+          </div>
+        </div>
+        <button id="close-sidebar-btn" class="lg:hidden p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Scrollable Sidebar Panel Content -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        
+        <!-- RPG Character / Level Status -->
+        <div class="bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/60 rounded-2xl p-5 relative overflow-hidden transition-colors">
+          <div class="absolute -right-6 -bottom-6 text-slate-300/30 dark:text-slate-800/10 w-24 h-24 pointer-events-none">
+            <i data-lucide="shield" class="w-full h-full"></i>
+          </div>
+          <div class="flex items-center space-x-4">
+            <div id="character-avatar" class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 shadow-lg shadow-brand-500/20 flex items-center justify-center text-3xl select-none">
+              🧙‍♂️
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <span id="level-badge" class="px-2 py-0.5 text-xs font-bold bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/30 rounded">LVL 1</span>
+                <span id="rank-name" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Task Novice</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-1" id="xp-text">0 / 150 XP</p>
+            </div>
+          </div>
+          <!-- XP Bar -->
+          <div class="mt-4">
+            <div class="w-full bg-slate-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+              <div id="xp-progress-bar" class="bg-gradient-to-r from-brand-500 to-indigo-500 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(139,92,246,0.3)]" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Streaks & Daily Goal Check -->
+        <div class="flex items-center justify-between bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-2xl p-4">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-500">
+              <i data-lucide="flame" class="w-6 h-6 animate-bounce"></i>
+            </div>
+            <div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Daily Streak</p>
+              <h4 id="streak-counter" class="text-lg font-bold text-orange-600 dark:text-orange-500">0 Days</h4>
+            </div>
+          </div>
+          <div class="text-right">
+            <span id="streak-status-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-slate-305 bg-slate-400 dark:bg-slate-700"></span>
+            <p id="streak-desc" class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">No completions today</p>
+          </div>
+        </div>
+
+        <!-- Accountability Banner -->
+        <div id="accountability-box" class="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-xs text-slate-600 dark:text-slate-400 flex items-start space-x-2">
+          <i data-lucide="info" class="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5"></i>
+          <span id="accountability-msg">A small step today is better than no steps. You got this!</span>
+        </div>
+
+        <!-- Statistics -->
+        <div>
+          <h3 class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Statistics</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-slate-100 dark:bg-slate-900/30 p-3 rounded-xl border border-slate-200 dark:border-slate-800/40">
+              <p class="text-[10px] text-slate-500 font-bold uppercase">Completed</p>
+              <h4 id="stat-completed" class="text-lg font-black text-slate-800 dark:text-slate-200 mt-1">0</h4>
+            </div>
+            <div class="bg-slate-100 dark:bg-slate-900/30 p-3 rounded-xl border border-slate-200 dark:border-slate-800/40">
+              <p class="text-[10px] text-slate-500 font-bold uppercase">XP Gained Today</p>
+              <h4 id="stat-xp-today" class="text-lg font-black text-brand-655 text-brand-600 dark:text-brand-400 mt-1">0</h4>
+            </div>
+            <div class="bg-slate-100 dark:bg-slate-900/30 p-3 rounded-xl border border-slate-200 dark:border-slate-800/40">
+              <p class="text-[10px] text-slate-500 font-bold uppercase">Weekly Rate</p>
+              <h4 id="stat-weekly-rate" class="text-lg font-black text-slate-800 dark:text-slate-200 mt-1">0%</h4>
+            </div>
+            <div class="bg-slate-100 dark:bg-slate-900/30 p-3 rounded-xl border border-slate-200 dark:border-slate-800/40">
+              <p class="text-[10px] text-slate-500 font-bold uppercase">Blocked Quests</p>
+              <h4 id="stat-blocked" class="text-lg font-black text-red-605 text-red-600 dark:text-red-400 mt-1">0</h4>
+            </div>
+          </div>
+        </div>
+
+        <!-- Achievements Badges Grid -->
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-bold text-slate-400 dark:text-slate-505 dark:text-slate-500 uppercase tracking-widest">Achievements</h3>
+            <span id="badge-count-ratio" class="text-xs font-medium text-slate-500 dark:text-slate-400">0/10</span>
+          </div>
+          <div id="badges-grid" class="grid grid-cols-5 gap-1.5">
+            <!-- Badges rendered via Javascript -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Sidebar Footer (Export, Import, Theme) -->
+      <div class="p-6 border-t border-slate-200 dark:border-slate-800/50 space-y-4">
+        
+        <!-- Dev Check / Stats Cheat Code hidden inline link -->
+        <div class="flex justify-between items-center text-xs text-slate-400 dark:text-slate-500">
+          <span>QuestBoard v1.0</span>
+          <button onclick="devAddXP()" class="opacity-20 hover:opacity-100 transition text-[9px] hover:text-brand-500 dark:hover:text-brand-400 font-mono">Dev: +50XP</button>
+        </div>
+
+        <!-- Action Grid -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button id="export-btn" class="flex items-center justify-center space-x-1.5 py-2 px-3 border border-slate-200 dark:border-slate-800 bg-white hover:bg-slate-50 dark:bg-transparent dark:hover:bg-slate-805 dark:hover:bg-slate-800/50 rounded-lg text-slate-705 text-slate-700 dark:text-slate-300 transition">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Backup</span>
+          </button>
+          <button id="import-btn" class="flex items-center justify-center space-x-1.5 py-2 px-3 border border-slate-200 dark:border-slate-800 bg-white hover:bg-slate-50 dark:bg-transparent dark:hover:bg-slate-805 dark:hover:bg-slate-800/50 rounded-lg text-slate-705 text-slate-700 dark:text-slate-300 transition">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+            <span>Restore</span>
+          </button>
+          <input type="file" id="import-file-input" class="hidden" accept=".json">
+          <button id="sync-status" class="col-span-2 flex items-center justify-center space-x-1.5 py-2 px-3 border border-slate-500/30 bg-slate-50/50 dark:bg-slate-500/10 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-700 dark:text-slate-300 transition font-semibold cursor-pointer">
+            <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
+            <span id="sync-status-text">Connect Save File</span>
+          </button>
+        </div>
+
+        <!-- Install PWA Button -->
+        <button id="install-pwa-btn" class="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-lg text-xs font-semibold transition hidden">
+          Install as Desktop App
+        </button>
+
+        <button id="reset-btn" class="w-full py-2 border border-red-500/20 text-red-655 text-red-500 hover:bg-red-500/10 rounded-lg text-xs font-semibold transition">
+          Reset Database
+        </button>
+
+      </div>
+    </aside>
+
+    <!-- Main Workspace Area -->
+    <main class="flex-1 flex flex-col min-h-screen overflow-hidden">
+      
+      <!-- Topbar Header -->
+      <header class="p-6 border-b border-slate-205 border-slate-200 dark:border-slate-900 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
+        
+        <!-- Left: Date & Clock & Daily Quote -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center space-x-3 mb-1">
+            <h2 id="current-date-str" class="text-sm font-bold text-slate-500 dark:text-slate-400">Thursday, July 16, 2026</h2>
+            <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+            <span id="live-time" class="text-xs font-medium text-slate-405 text-slate-500">17:39 PM</span>
+          </div>
+          <!-- Quote Rotator -->
+          <div class="flex items-start space-x-1.5 group max-w-xl">
+            <i data-lucide="quote" class="w-4 h-4 text-brand-555 text-brand-500 dark:text-brand-400 shrink-0 mt-0.5 opacity-60"></i>
+            <div>
+              <p id="motivational-quote" class="text-xs text-slate-600 dark:text-slate-400 italic line-clamp-1 font-medium">"Focus on being productive instead of busy."</p>
+              <span id="motivational-author" class="text-[10px] text-slate-505 dark:text-slate-500 block">— Tim Ferriss</span>
+            </div>
+            <button id="refresh-quote-btn" class="p-0.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition opacity-0 group-hover:opacity-100">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Actions, Filters, Search -->
+        <div class="flex flex-wrap items-center gap-3">
+          
+          <!-- Search / Keyboard indicator -->
+          <div class="relative min-w-[200px] w-full md:w-auto">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+              <i data-lucide="search" class="w-4 h-4"></i>
+            </span>
+            <input type="text" id="search-input" placeholder="Search quests... (press /)" class="w-full md:w-60 pl-9 pr-8 py-2 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-brand-500 text-slate-800 dark:text-slate-200 rounded-xl transition-all shadow-sm dark:shadow-none">
+            <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-[10px] font-mono text-slate-400 dark:text-slate-500">/</span>
+          </div>
+
+          <!-- Category filter dropdown -->
+          <select id="filter-category-select" class="py-2 px-3 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-brand-500 text-slate-700 dark:text-slate-300 rounded-xl transition shadow-sm dark:shadow-none">
+            <option value="ALL">All Categories</option>
+            <option value="Work">Work</option>
+            <option value="Study">Study</option>
+            <option value="Personal">Personal</option>
+            <option value="Health">Health</option>
+            <option value="Admin">Admin</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <!-- Study Timer Widget -->
+          <div class="flex items-center gap-2">
+            <div class="flex items-center bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm dark:shadow-none">
+              <div id="timer-display" class="px-3 py-2 text-sm font-mono font-bold text-brand-600 dark:text-brand-400 w-16 text-center border-r border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" title="Click to reset timer">50:00</div>
+              <button id="timer-play-btn" class="p-2 text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400 transition" title="Start Timer">
+                <i data-lucide="play" class="w-4 h-4"></i>
+              </button>
+              <button id="timer-pause-btn" class="p-2 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 transition hidden" title="Pause Timer">
+                <i data-lucide="pause" class="w-4 h-4"></i>
+              </button>
+              <button id="timer-stop-btn" class="p-2 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition border-l border-slate-200 dark:border-slate-800" title="Stop & Collect XP">
+                <i data-lucide="square" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div id="timer-sessions-badge" class="hidden sm:flex items-center px-2 py-1 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-lg border border-brand-200 dark:border-brand-500/20 text-xs font-bold transition-all" title="Sessions completed today">
+              <i data-lucide="target" class="w-3 h-3 mr-1"></i>
+              <span id="stat-sessions-today">0</span>
+            </div>
+          </div>
+
+          <!-- Theme Toggle Button -->
+          <button id="theme-toggle-btn" class="p-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/30 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-xl transition shadow-sm dark:shadow-none">
+            <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+            <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+          </button>
+
+          <!-- Add Quest Button -->
+          <button id="add-task-btn" class="flex items-center space-x-2 py-2 px-4 bg-gradient-to-r from-brand-600 to-indigo-650 dark:from-brand-600 dark:to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white rounded-xl font-semibold shadow-lg shadow-brand-600/20 hover:shadow-brand-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all">
+            <i data-lucide="plus" class="w-5 h-5"></i>
+            <span>New Quest <kbd class="ml-1 text-[10px] opacity-75 font-mono px-1.5 py-0.5 bg-brand-700/50 rounded">N</kbd></span>
+          </button>
+
+        </div>
+      </header>
+
+      <!-- Kanban Board Space -->
+      <div class="flex-1 overflow-x-auto p-6 scrollbar-thin">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 min-w-[900px] h-full items-start">
+          
+          <!-- Column: To Do -->
+          <div class="flex flex-col max-h-full min-h-[500px] bg-slate-100/50 dark:bg-slate-900/20 border border-slate-200/80 dark:border-slate-850 rounded-2xl p-4 transition-colors">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-blue-500/10">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-550 bg-blue-500"></span>
+                <h3 class="font-bold text-sm tracking-wide text-slate-700 dark:text-slate-300 uppercase">To Do</h3>
+                <span id="todo-count" class="px-2 py-0.5 text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full border border-blue-500/20">0</span>
+              </div>
+            </div>
+            <!-- Cards Container -->
+            <div id="todo" class="flex-1 overflow-y-auto space-y-3 min-h-[350px] pb-6">
+              <!-- Cards rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Column: In Progress -->
+          <div class="flex flex-col max-h-full min-h-[500px] bg-slate-100/50 dark:bg-slate-900/20 border border-slate-200/80 dark:border-slate-850 rounded-2xl p-4 transition-colors">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-indigo-500/10">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-550 bg-indigo-500"></span>
+                <h3 class="font-bold text-sm tracking-wide text-slate-700 dark:text-slate-300 uppercase">In Progress</h3>
+                <span id="in_progress-count" class="px-2 py-0.5 text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-500/20">0</span>
+              </div>
+            </div>
+            <!-- Cards Container -->
+            <div id="in_progress" class="flex-1 overflow-y-auto space-y-3 min-h-[350px] pb-6">
+              <!-- Cards rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Column: Blocked -->
+          <div class="flex flex-col max-h-full min-h-[500px] bg-slate-100/50 dark:bg-slate-900/20 border border-slate-200/80 dark:border-slate-850 rounded-2xl p-4 transition-colors">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-red-500/10">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-550 bg-red-500"></span>
+                <h3 class="font-bold text-sm tracking-wide text-slate-700 dark:text-slate-300 uppercase">Blocked</h3>
+                <span id="blocked-count" class="px-2 py-0.5 text-xs font-semibold bg-red-500/10 text-red-655 text-red-600 dark:text-red-400 rounded-full border border-red-500/20">0</span>
+              </div>
+            </div>
+            <!-- Cards Container -->
+            <div id="blocked" class="flex-1 overflow-y-auto space-y-3 min-h-[350px] pb-6">
+              <!-- Cards rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Column: Completed -->
+          <div class="flex flex-col max-h-full min-h-[500px] bg-slate-100/50 dark:bg-slate-900/20 border border-slate-200/80 dark:border-slate-850 rounded-2xl p-4 transition-colors">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-emerald-500/10">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-550 bg-emerald-500"></span>
+                <h3 class="font-bold text-sm tracking-wide text-slate-700 dark:text-slate-300 uppercase">Completed</h3>
+                <span id="completed-count" class="px-2 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-605 text-emerald-600 dark:text-emerald-400 rounded-full border border-emerald-500/20">0</span>
+              </div>
+              <button id="clear-completed-btn" class="p-1 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded transition" title="Clear all completed tasks">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <!-- Cards Container -->
+            <div id="completed" class="flex-1 overflow-y-auto space-y-3 min-h-[350px] pb-6">
+              <!-- Cards rendered via JS -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- History Log Drawer Button (Fixed bottom right) -->
+      <button id="toggle-history-btn" class="fixed bottom-6 right-6 flex items-center space-x-2 py-2.5 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl shadow-2xl z-20 transition">
+        <i data-lucide="history" class="w-4 h-4 text-brand-600 dark:text-brand-400"></i>
+        <span class="text-xs font-semibold">Quest Log History</span>
+      </button>
+
+    </main>
+  </div>
+
+  <!-- Modal: Add / Edit Task -->
+  <div id="task-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transition-all scale-95 opacity-0 duration-200" id="task-modal-card">
+      
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <h3 id="modal-title" class="text-lg font-bold text-slate-800 dark:text-slate-100">Add New Quest</h3>
+        <button id="close-modal-btn" class="p-1 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Form -->
+      <form id="task-form" class="p-6 space-y-4">
+        <input type="hidden" id="modal-task-id">
+
+        <!-- Title -->
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5" for="task-title">Title *</label>
+          <input type="text" id="task-title" required placeholder="Defeat the database boss, study matrices..." class="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:border-brand-500 text-slate-800 dark:text-slate-100 focus:outline-none rounded-xl text-sm transition">
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5" for="task-desc">Description</label>
+          <textarea id="task-desc" rows="3" placeholder="Break it down into smaller quests if possible..." class="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:border-brand-500 text-slate-800 dark:text-slate-100 focus:outline-none rounded-xl text-sm transition"></textarea>
+        </div>
+
+        <!-- Grid Input (Category, Priority, Est Time, Due Date, Recurring) -->
+        <div class="grid grid-cols-2 gap-4">
+          
+          <!-- Category -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5" for="task-category">Category</label>
+            <select id="task-category" class="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:border-brand-500 text-slate-700 dark:text-slate-200 focus:outline-none rounded-xl text-sm transition">
+              <option value="Work">Work</option>
+              <option value="Study">Study</option>
+              <option value="Personal">Personal</option>
+              <option value="Health">Health</option>
+              <option value="Admin">Admin</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <!-- Priority -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5" for="task-priority">Priority</label>
+            <select id="task-priority" class="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:border-brand-500 text-slate-700 dark:text-slate-200 focus:outline-none rounded-xl text-sm transition">
+              <option value="Low">Low (+20 XP)</option>
+              <option value="Medium">Medium (+35 XP)</option>
+              <option value="High">High (+50 XP)</option>
+            </select>
+          </div>
+
+          <!-- Est Time -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5" for="task-est-time">Est. Time (Hours)</label>
+            <input type="number" id="task-est-time" min="0.5" step="0.5" placeholder="2" class="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:border-brand-500 text-slate-800 dark:text-slate-100 focus:outline-none rounded-xl text-sm transition">
+          </div>
+
+          <!-- Due Date -->
+          <div>
+            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5" for="task-due-date">Due Date</label>
+            <input type="date" id="task-due-date" class="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:border-brand-500 text-slate-800 dark:text-slate-100 focus:outline-none rounded-xl text-sm transition">
+          </div>
+
+          <!-- Recurring -->
+          <div class="col-span-2">
+            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5" for="task-recurring">Recurring Option</label>
+            <select id="task-recurring" class="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:border-brand-500 text-slate-700 dark:text-slate-200 focus:outline-none rounded-xl text-sm transition">
+              <option value="None">None</option>
+              <option value="Daily">Daily (Resets to 'To Do' every midnight if completed)</option>
+              <option value="Weekly">Weekly (Resets to 'To Do' weekly if completed)</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Form Buttons -->
+        <div class="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div id="delete-btn-container">
+            <button type="button" id="delete-task-btn" class="px-4 py-2 border border-red-500/20 text-red-500 hover:bg-red-500/10 rounded-xl text-sm font-semibold transition hidden">
+              Delete Quest
+            </button>
+          </div>
+          <div class="flex items-center space-x-3">
+            <button type="button" id="quick-complete-modal-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold transition hidden">
+              Complete Quest
+            </button>
+            <button type="submit" id="save-task-btn" class="px-5 py-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-brand-600/25 transition">
+              Create Quest
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Level Up Celebration -->
+  <div id="level-up-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex flex-col items-center justify-center hidden p-4">
+    <div class="text-center relative max-w-sm">
+      
+      <!-- Sparkles / Aura -->
+      <div class="absolute inset-0 bg-gradient-to-tr from-brand-500/30 to-amber-500/30 rounded-full blur-3xl -z-10 animate-pulse"></div>
+
+      <!-- Level Up badge -->
+      <div id="level-up-avatar" class="w-32 h-32 rounded-3xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-amber-500 text-6xl flex items-center justify-center mx-auto shadow-2xl glow-active mb-6 select-none">
+        🧙‍♂️
+      </div>
+
+      <h1 class="text-5xl font-black bg-gradient-to-r from-brand-400 via-amber-400 to-pink-400 bg-clip-text text-transparent tracking-tight animate-bounce">LEVEL UP!</h1>
+      <p id="level-up-subtitle" class="text-xl font-bold text-slate-200 mt-2">You reached Level 2!</p>
+      
+      <!-- motivational quotes -->
+      <p id="level-up-quote" class="text-sm text-slate-400 italic mt-4 max-w-xs mx-auto">"Small daily improvements over time lead to stunning results."</p>
+
+      <button id="close-level-up-btn" class="mt-8 px-8 py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-xl shadow-brand-600/40 hover:scale-[1.05] active:scale-[0.98] transition-all">
+        Claim Rewards & Continue
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Slide-out Drawer: History Logs -->
+  <div id="history-drawer" class="fixed inset-y-0 right-0 w-full max-w-md bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+    
+    <!-- Drawer Header -->
+    <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <i data-lucide="history" class="w-5 h-5 text-brand-600 dark:text-brand-400"></i>
+        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">Quest Log History</h3>
+      </div>
+      <button id="close-history-btn" class="p-1 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Drawer Content -->
+    <div id="history-logs-container" class="flex-1 overflow-y-auto p-6 space-y-4">
+      <!-- Logs rendered via JS -->
+    </div>
+
+    <!-- Clear logs option -->
+    <div class="p-6 border-t border-slate-200 dark:border-slate-800">
+      <button id="clear-history-btn" class="w-full py-2.5 border border-red-500/20 hover:bg-red-500/10 text-red-500 dark:text-red-400 rounded-xl text-xs font-bold transition">
+        Wipe Completion History
+      </button>
+    </div>
+  </div>
+
+  <!-- Custom Badge Tooltip Popover (Floating UI placeholder helper) -->
+  <div id="custom-tooltip" class="absolute hidden z-[200] max-w-xs p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl text-xs text-slate-700 dark:text-slate-300 pointer-events-none">
+    <!-- Populated by JS on hover -->
+  </div>
+
+  <!-- Audio Chime synthesized via Web Audio API -->
+  <script>
+    // Audio synthesizer helper
+    function playSound(type) {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const now = ctx.currentTime;
+
+        if (type === 'completion') {
+          // Play a quick satisfying high-pitched ding
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now); // D5 note
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.15); // A5 note
+
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.1, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          osc.start(now);
+          osc.stop(now + 0.3);
+
+        } else if (type === 'level_up') {
+          // Ascending major chord sequence
+          const playNote = (freq, start, duration) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, start);
+            
+            gain.gain.setValueAtTime(0, start);
+            gain.gain.linearRampToValueAtTime(0.15, start + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.start(start);
+            osc.stop(start + duration);
+          };
+
+          // Chord notes: C4 (261.63), E4 (329.63), G4 (392.00), C5 (523.25)
+          playNote(261.63, now, 0.4);
+          playNote(329.63, now + 0.1, 0.4);
+          playNote(392.00, now + 0.2, 0.4);
+          playNote(523.25, now + 0.3, 0.6);
+
+        } else if (type === 'badge') {
+          // A celebratory double-ding
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const gain1 = ctx.createGain();
+          const gain2 = ctx.createGain();
+
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(523.25, now); // C5
+          gain1.gain.setValueAtTime(0, now);
+          gain1.gain.linearRampToValueAtTime(0.1, now + 0.02);
+          gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(659.25, now + 0.08); // E5
+          gain2.gain.setValueAtTime(0, now + 0.08);
+          gain2.gain.linearRampToValueAtTime(0.1, now + 0.1);
+          gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+
+          osc1.connect(gain1);
+          gain1.connect(ctx.destination);
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+
+          osc1.start(now);
+          osc1.stop(now + 0.25);
+          osc2.start(now + 0.08);
+          osc2.stop(now + 0.35);
+        }
+      } catch (err) {
+        console.warn('Audio Context creation failed: ', err);
+      }
+    }
+  </script>
+
+  <!-- Application Logic Code -->
+  <script>
+    // State definitions
+    let state = {
+      tasks: [],
+      xp: 0,
+      streak: 0,
+      lastCompletedDate: null,
+      unlockedBadges: [],
+      history: [],
+      stats: {
+        totalCompletions: 0,
+        totalCreated: 0,
+        onTimeCompletions: 0,
+        categoriesCompleted: {
+          Work: 0,
+          Study: 0,
+          Personal: 0,
+          Health: 0,
+          Admin: 0,
+          Other: 0
+        },
+        xpGainedToday: 0,
+        sessionsCompletedToday: 0,
+        lastActiveDate: null
+      },
+      theme: 'dark'
+    };
+
+    // Constant definition lists
+    const BADGES = [
+      // ── Starter ──────────────────────────────────
+      {
+        id: 'first_step',
+        title: 'First Step',
+        desc: 'Complete your very first quest. Every legend starts somewhere.',
+        icon: 'trophy',
+        color: 'text-yellow-600 bg-yellow-500/10 border-yellow-500/20 dark:text-yellow-400 glow-active'
+      },
+      {
+        id: 'hat_trick',
+        title: 'Hat Trick',
+        desc: 'Complete 3 tasks in a single day.',
+        icon: 'star',
+        color: 'text-yellow-600 bg-yellow-500/10 border-yellow-500/20 dark:text-yellow-300'
+      },
+      {
+        id: 'ten_tasks',
+        title: 'Getting Warmed Up',
+        desc: 'Complete 10 quests total.',
+        icon: 'check-circle',
+        color: 'text-lime-600 bg-lime-500/10 border-lime-500/20 dark:text-lime-400'
+      },
+      // ── Level Ranks ───────────────────────────────
+      {
+        id: 'squire',
+        title: 'Productivity Squire',
+        desc: 'Reach Level 3.',
+        icon: 'shield',
+        color: 'text-blue-600 bg-blue-500/10 border-blue-500/20 dark:text-blue-400'
+      },
+      {
+        id: 'knight',
+        title: 'Focus Knight',
+        desc: 'Reach Level 5.',
+        icon: 'swords',
+        color: 'text-indigo-600 bg-indigo-500/10 border-indigo-500/20 dark:text-indigo-400'
+      },
+      {
+        id: 'champion',
+        title: 'Efficiency Champion',
+        desc: 'Reach Level 8.',
+        icon: 'medal',
+        color: 'text-violet-600 bg-violet-500/10 border-violet-500/20 dark:text-violet-400'
+      },
+      {
+        id: 'wizard',
+        title: 'Time Wizard',
+        desc: 'Reach Level 10.',
+        icon: 'wand-2',
+        color: 'text-purple-600 bg-purple-500/10 border-purple-500/20 dark:text-purple-400'
+      },
+      {
+        id: 'archmage',
+        title: 'Flow State Archmage',
+        desc: 'Reach Level 20 — the pinnacle of mastery.',
+        icon: 'sparkles',
+        color: 'text-fuchsia-600 bg-fuchsia-500/10 border-fuchsia-500/20 dark:text-fuchsia-400 glow-active'
+      },
+      // ── Streaks ───────────────────────────────────
+      {
+        id: 'spark',
+        title: 'First Spark',
+        desc: 'Maintain a 2-day streak.',
+        icon: 'flame',
+        color: 'text-orange-500 bg-orange-500/10 border-orange-500/20 dark:text-orange-400'
+      },
+      {
+        id: 'marathon',
+        title: 'Consistent Warrior',
+        desc: 'Maintain a 3-day streak.',
+        icon: 'activity',
+        color: 'text-orange-600 bg-orange-500/10 border-orange-500/20 dark:text-orange-400'
+      },
+      {
+        id: 'unstoppable',
+        title: 'Unstoppable Force',
+        desc: 'Maintain a 7-day streak.',
+        icon: 'zap',
+        color: 'text-red-600 bg-red-500/10 border-red-500/20 dark:text-red-400'
+      },
+      {
+        id: 'iron_will',
+        title: 'Iron Will',
+        desc: 'Maintain a 14-day streak. Truly relentless.',
+        icon: 'shield-check',
+        color: 'text-red-700 bg-red-600/10 border-red-600/20 dark:text-red-300 glow-active'
+      },
+      {
+        id: 'legendary_streak',
+        title: 'Legendary Grinder',
+        desc: 'Hit a 30-day streak. You are unstoppable.',
+        icon: 'crown',
+        color: 'text-rose-600 bg-rose-500/10 border-rose-500/20 dark:text-rose-300 glow-active'
+      },
+      // ── Volume Milestones ─────────────────────────
+      {
+        id: 'fifty_tasks',
+        title: 'Centurion',
+        desc: 'Complete 50 quests total.',
+        icon: 'award',
+        color: 'text-amber-600 bg-amber-500/10 border-amber-500/20 dark:text-amber-400'
+      },
+      {
+        id: 'hundred_tasks',
+        title: 'Quest Veteran',
+        desc: 'Complete 100 quests. The grind is real.',
+        icon: 'package',
+        color: 'text-amber-700 bg-amber-600/10 border-amber-600/20 dark:text-amber-300'
+      },
+      {
+        id: 'five_hundred',
+        title: 'Five Hundred Strong',
+        desc: 'Complete 500 total quests. Legendary productivity.',
+        icon: 'infinity',
+        color: 'text-yellow-500 bg-yellow-400/10 border-yellow-400/20 dark:text-yellow-300 glow-active'
+      },
+      // ── Quality / Skill ───────────────────────────
+      {
+        id: 'early_bird',
+        title: 'On-Time Champion',
+        desc: 'Complete 5 tasks on or before their due date.',
+        icon: 'clock',
+        color: 'text-teal-600 bg-teal-500/10 border-teal-500/20 dark:text-teal-400'
+      },
+      {
+        id: 'deadline_crusher',
+        title: 'Deadline Crusher',
+        desc: 'Complete 25 tasks on or before their due date.',
+        icon: 'timer',
+        color: 'text-teal-700 bg-teal-600/10 border-teal-600/20 dark:text-teal-300'
+      },
+      {
+        id: 'deep_work',
+        title: 'Deep Focus Master',
+        desc: 'Complete a task with estimated time >= 4 hours.',
+        icon: 'brain',
+        color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20 dark:text-emerald-400'
+      },
+      {
+        id: 'marathon_session',
+        title: 'Marathon Session',
+        desc: 'Complete a task estimated at 8+ hours.',
+        icon: 'monitor',
+        color: 'text-emerald-700 bg-emerald-600/10 border-emerald-600/20 dark:text-emerald-300'
+      },
+      // ── Category Mastery ──────────────────────────
+      {
+        id: 'diverse',
+        title: 'Jack of All Trades',
+        desc: 'Complete quests in at least 4 distinct categories.',
+        icon: 'compass',
+        color: 'text-cyan-600 bg-cyan-500/10 border-cyan-500/20 dark:text-cyan-400'
+      },
+      {
+        id: 'polymath',
+        title: 'Polymath',
+        desc: 'Complete quests in all 6 categories.',
+        icon: 'globe',
+        color: 'text-cyan-700 bg-cyan-600/10 border-cyan-600/20 dark:text-cyan-300'
+      },
+      {
+        id: 'work_master',
+        title: 'Career Conqueror',
+        desc: 'Complete 20 Work category tasks.',
+        icon: 'briefcase',
+        color: 'text-indigo-600 bg-indigo-500/10 border-indigo-500/20 dark:text-indigo-400'
+      },
+      {
+        id: 'health_master',
+        title: 'Wellness Warrior',
+        desc: 'Complete 20 Health category tasks.',
+        icon: 'heart-pulse',
+        color: 'text-pink-600 bg-pink-500/10 border-pink-500/20 dark:text-pink-400'
+      },
+      {
+        id: 'study_master',
+        title: 'Knowledge Seeker',
+        desc: 'Complete 20 Study category tasks.',
+        icon: 'book-open',
+        color: 'text-violet-600 bg-violet-500/10 border-violet-500/20 dark:text-violet-400'
+      },
+      // ── XP Milestones ─────────────────────────────
+      {
+        id: 'xp_500',
+        title: 'XP Apprentice',
+        desc: 'Accumulate 500 total XP.',
+        icon: 'sparkles',
+        color: 'text-brand-600 bg-brand-500/10 border-brand-500/20 dark:text-brand-400'
+      },
+      {
+        id: 'xp_2000',
+        title: 'XP Veteran',
+        desc: 'Accumulate 2000 total XP.',
+        icon: 'gem',
+        color: 'text-brand-700 bg-brand-600/10 border-brand-600/20 dark:text-brand-300 glow-active'
+      }
+    ];
+
+    const QUOTES = [
+      { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+      { text: "Focus on being productive instead of busy.", author: "Tim Ferriss" },
+      { text: "Action is the foundational key to all success.", author: "Pablo Picasso" },
+      { text: "You do not rise to the level of your goals. You fall to the level of your systems.", author: "James Clear" },
+      { text: "Amateurs sit and wait for inspiration, the rest of us just get up and go to work.", author: "Stephen King" },
+      { text: "Energy and persistence conquer all things.", author: "Benjamin Franklin" },
+      { text: "Small daily improvements over time lead to stunning results.", author: "Robin Sharma" },
+      { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+      { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+      { text: "Your mind is for having ideas, not holding them.", author: "David Allen" }
+    ];
+
+    const ACCOUNTABILITY_MESSAGES = [
+      "No completed tasks today yet. Let's make some progress!",
+      "A small step today is better than no steps. You got this!",
+      "Consistency beats intensity. What's one quick thing you can do?",
+      "Keep your streak alive! The arena awaits.",
+      "Your future self will thank you for the work you do today."
+    ];
+
+    const PRODUCTIVITY_TIPS = [
+      "Tip: Try the Pomodoro Technique — 25 mins focus, 5 mins rest.",
+      "Tip: Break down your largest task into 3 tiny chunks.",
+      "Tip: Put your phone in another room to get in flow.",
+      "Tip: Tackle your highest priority task first thing.",
+      "Tip: Rest is part of the process. Stretch and hydrate!"
+    ];
+
+    const RANK_TITLES = [
+      { maxLvl: 1,  title: "Raw Recruit",           emoji: "🌱" },
+      { maxLvl: 2,  title: "Task Novice",            emoji: "📝" },
+      { maxLvl: 3,  title: "Initiative Taker",       emoji: "🚶" },
+      { maxLvl: 4,  title: "Productivity Squire",    emoji: "🛡️" },
+      { maxLvl: 5,  title: "Focus Knight",           emoji: "⚔️" },
+      { maxLvl: 6,  title: "System Builder",         emoji: "🔧" },
+      { maxLvl: 7,  title: "Momentum Rider",         emoji: "🏇" },
+      { maxLvl: 8,  title: "Efficiency Champion",    emoji: "🏆" },
+      { maxLvl: 9,  title: "Deep Work Adept",        emoji: "🧠" },
+      { maxLvl: 10, title: "Time Wizard",            emoji: "🧙‍♂️" },
+      { maxLvl: 11, title: "Habit Architect",        emoji: "🏗️" },
+      { maxLvl: 12, title: "Flow Seeker",            emoji: "🌊" },
+      { maxLvl: 13, title: "Iron-Mind Warrior",      emoji: "🪖" },
+      { maxLvl: 14, title: "Sprint Master",          emoji: "🏃" },
+      { maxLvl: 15, title: "Quest Commander",        emoji: "📣" },
+      { maxLvl: 16, title: "Legendary Executor",     emoji: "⚡" },
+      { maxLvl: 17, title: "Apex Operator",          emoji: "🎯" },
+      { maxLvl: 18, title: "Grand Strategist",       emoji: "♟️" },
+      { maxLvl: 19, title: "Elite Overlord",         emoji: "👑" },
+      { maxLvl: 20, title: "Flow State Archmage",    emoji: "🧙" },
+      { maxLvl: 22, title: "Celestial Adept",        emoji: "🌠" },
+      { maxLvl: 25, title: "Myth-Level Achiever",    emoji: "🦄" },
+      { maxLvl: 30, title: "Transcendent Grinder",   emoji: "🌌" },
+      { maxLvl: Infinity, title: "Immortal Taskmaster", emoji: "♾️" }
+    ];
+
+    // Helper functions
+    function getLevelInfo(xp) {
+      const xpPerLevel = 150;
+      const level = Math.floor(xp / xpPerLevel) + 1;
+      const currentXP = xp % xpPerLevel;
+      const percent = Math.round((currentXP / xpPerLevel) * 100);
+      
+      let rank = RANK_TITLES[RANK_TITLES.length - 1];
+      for (const r of RANK_TITLES) {
+        if (level <= r.maxLvl) {
+          rank = r;
+          break;
+        }
+      }
+      return { level, percent, currentXP, xpPerLevel, rankTitle: rank.title, rankEmoji: rank.emoji };
+    }
+
+    function getTodayString() {
+      // YYYY-MM-DD local timezone safety
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function getYesterdayString() {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    // -- Offline File System Access API --
+
+    let fileHandle = null;
+
+    // IndexedDB wrapper to store file handle for next session
+    async function getDb() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('QuestBoardDB', 1);
+        req.onupgradeneeded = (e) => {
+          e.target.result.createObjectStore('handles');
+        };
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror = () => reject();
+      });
+    }
+
+    async function storeHandle(handle) {
+      if (!handle) return;
+      try {
+        const db = await getDb();
+        const tx = db.transaction('handles', 'readwrite');
+        tx.objectStore('handles').put(handle, 'saveFile');
+      } catch (e) {
+        console.warn('Failed to store handle', e);
+      }
+    }
+
+    async function getStoredHandle() {
+      try {
+        const db = await getDb();
+        return new Promise((resolve) => {
+          const req = db.transaction('handles', 'readonly').objectStore('handles').get('saveFile');
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => resolve(null);
+        });
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function verifyPermission(handle) {
+      if (!handle) return false;
+      const opts = { mode: 'readwrite' };
+      if (await handle.queryPermission(opts) === 'granted') {
+        return true;
+      }
+      if (await handle.requestPermission(opts) === 'granted') {
+        return true;
+      }
+      return false;
+    }
+
+    document.getElementById('sync-status').addEventListener('click', async () => {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: 'questboard_data.json',
+          types: [{
+            description: 'JSON Files',
+            accept: { 'application/json': ['.json'] },
+          }],
+        });
+        fileHandle = handle;
+        await storeHandle(fileHandle);
+        await saveState(); // Save current state immediately
+        document.getElementById('sync-status-text').innerText = 'Auto-saving to ' + handle.name;
+        document.getElementById('sync-status').className = 'col-span-2 flex items-center justify-center space-x-1.5 py-2 px-3 border border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg text-blue-700 dark:text-blue-300 transition font-semibold cursor-pointer';
+        document.getElementById('sync-status').querySelector('i').setAttribute('data-lucide', 'save');
+        lucide.createIcons();
+      } catch (err) {
+        console.warn('User cancelled file picker or it failed', err);
+      }
+    });
+
+    // Save and Load State
+    async function saveState() {
+      const dataStr = JSON.stringify(state, null, 2);
+      localStorage.setItem('questboard_state', dataStr);
+      
+      if (fileHandle) {
+        try {
+          if (await verifyPermission(fileHandle)) {
+            const writable = await fileHandle.createWritable();
+            await writable.write(dataStr);
+            await writable.close();
+            const statusText = document.getElementById('sync-status-text');
+            if (statusText) statusText.innerText = 'Saved to ' + fileHandle.name;
+          }
+        } catch (e) {
+          console.warn("Auto-sync to file failed:", e);
+          const statusText = document.getElementById('sync-status-text');
+          if (statusText) statusText.innerText = 'Save Failed';
+        }
+      }
+    }
+
+    async function loadState() {
+      let data = null;
+      
+      try {
+        fileHandle = await getStoredHandle();
+        if (fileHandle) {
+          if (await verifyPermission(fileHandle)) {
+            const file = await fileHandle.getFile();
+            data = await file.text();
+            document.getElementById('sync-status-text').innerText = 'Auto-saving to ' + fileHandle.name;
+            document.getElementById('sync-status').className = 'col-span-2 flex items-center justify-center space-x-1.5 py-2 px-3 border border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg text-blue-700 dark:text-blue-300 transition font-semibold cursor-pointer';
+            document.getElementById('sync-status').querySelector('i').setAttribute('data-lucide', 'save');
+            lucide.createIcons();
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to load from local file, falling back to local storage:", e);
+      }
+      
+      if (!data) {
+        data = localStorage.getItem('questboard_state');
+      }
+
+      if (data) {
+        try {
+          state = JSON.parse(data);
+          // Set structure fallback in case loaded data is from old structure
+          if (!state.stats) {
+            state.stats = {
+              totalCompletions: 0,
+              totalCreated: 0,
+              onTimeCompletions: 0,
+              categoriesCompleted: { Work: 0, Study: 0, Personal: 0, Health: 0, Admin: 0, Other: 0 },
+              xpGainedToday: 0,
+              sessionsCompletedToday: 0,
+              lastActiveDate: null
+            };
+          }
+          if (state.stats.sessionsCompletedToday === undefined) {
+            state.stats.sessionsCompletedToday = 0;
+          }
+          if (!state.history) state.history = [];
+          if (!state.unlockedBadges) state.unlockedBadges = [];
+        } catch (e) {
+          console.error("Error loading local state:", e);
+        }
+      } else {
+        // Mock data initialization if empty
+        initializeMockData();
+      }
+      
+      applyTheme();
+      checkDateRollover();
+      updateDashboardUI();
+      renderAllQuests();
+    }
+
+    function initializeMockData() {
+      state.tasks = [
+        {
+          id: '1',
+          title: 'Defeat the Inbox monster',
+          description: 'Sort all incoming emails and reach inbox zero.',
+          category: 'Admin',
+          priority: 'Low',
+          estTime: 1,
+          dueDate: getTodayString(),
+          recurring: 'None',
+          status: 'todo',
+          createdAt: new Date().toISOString(),
+          completedAt: null,
+          xpAwarded: 20
+        },
+        {
+          id: '2',
+          title: 'Design app layout wireframe',
+          description: 'Draft the user experience mockup for client feedback.',
+          category: 'Work',
+          priority: 'High',
+          estTime: 3.5,
+          dueDate: getTodayString(),
+          recurring: 'None',
+          status: 'in_progress',
+          createdAt: new Date().toISOString(),
+          completedAt: null,
+          xpAwarded: 50
+        },
+        {
+          id: '3',
+          title: 'Review mathematical statistics theorems',
+          description: 'Go through Chapter 4 properties of estimators and CLT.',
+          category: 'Study',
+          priority: 'Medium',
+          estTime: 2,
+          dueDate: getYesterdayString(),
+          recurring: 'None',
+          status: 'blocked',
+          createdAt: new Date().toISOString(),
+          completedAt: null,
+          xpAwarded: 35
+        }
+      ];
+      state.xp = 60;
+      state.streak = 2;
+      state.lastCompletedDate = getYesterdayString();
+      state.stats.totalCreated = 3;
+      state.stats.lastActiveDate = getTodayString();
+      saveState();
+    }
+
+    // Check date change / rollover
+    function checkDateRollover() {
+      const todayStr = getTodayString();
+      const yesterdayStr = getYesterdayString();
+
+      // Check active date tracker to reset daily stats
+      if (state.stats.lastActiveDate !== todayStr) {
+        state.stats.xpGainedToday = 0;
+        state.stats.sessionsCompletedToday = 0;
+        state.stats.lastActiveDate = todayStr;
+      }
+
+      // Check streak validity
+      if (state.lastCompletedDate) {
+        if (state.lastCompletedDate !== todayStr && state.lastCompletedDate !== yesterdayStr) {
+          // User missed completing anything yesterday, streak resets
+          state.streak = 0;
+        }
+      }
+      
+      saveState();
+    }
+
+    // Dynamic UI styling & render
+    function applyTheme() {
+      const html = document.documentElement;
+      if (state.theme === 'dark') {
+        html.classList.add('dark');
+        html.classList.remove('light');
+      } else {
+        html.classList.remove('dark');
+        html.classList.add('light');
+      }
+    }
+
+    function toggleTheme() {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      applyTheme();
+      saveState();
+    }
+
+    // Calculate Completion bonus multiplier details
+    function calculateXPAward(task) {
+      let base = 20;
+      if (task.priority === 'Medium') base = 35;
+      else if (task.priority === 'High') base = 50;
+
+      // On-time bonus
+      let bonus = 0;
+      if (task.dueDate) {
+        const due = new Date(task.dueDate + 'T23:59:59');
+        const completed = new Date();
+        if (completed <= due) {
+          bonus += 15; // On time bonus XP
+        }
+      }
+
+      // Streak Bonus
+      if (state.streak >= 3) {
+        bonus += 5;
+      }
+      if (state.streak >= 7) {
+        bonus += 10;
+      }
+
+      return { total: base + bonus, base, bonus };
+    }
+
+    // Update statistics dashboard panel
+    function updateDashboardUI() {
+      const lvlInfo = getLevelInfo(state.xp);
+      
+      // Update sidebar level/badge info
+      document.getElementById('level-badge').innerText = `LVL ${lvlInfo.level}`;
+      document.getElementById('rank-name').innerText = lvlInfo.rankTitle;
+      document.getElementById('character-avatar').innerText = lvlInfo.rankEmoji;
+      document.getElementById('xp-text').innerText = `${lvlInfo.currentXP} / ${lvlInfo.xpPerLevel} XP (Total: ${state.xp} XP)`;
+      document.getElementById('xp-progress-bar').style.width = `${lvlInfo.percent}%`;
+
+      // Update streaks
+      document.getElementById('streak-counter').innerText = `${state.streak} ${state.streak === 1 ? 'Day' : 'Days'}`;
+      
+      const dot = document.getElementById('streak-status-dot');
+      const desc = document.getElementById('streak-desc');
+      const todayStr = getTodayString();
+      
+      if (state.lastCompletedDate === todayStr) {
+        dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-emerald-500";
+        desc.innerText = "Daily Quest Cleared!";
+      } else {
+        dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse";
+        desc.innerText = "Complete a task today!";
+      }
+
+      // Accountability message updates
+      const accountabilityMsg = document.getElementById('accountability-msg');
+      if (state.lastCompletedDate === todayStr) {
+        accountabilityMsg.innerText = "Daily goal achieved! Keep going or rest, your streak is secured.";
+      } else {
+        const randMsg = ACCOUNTABILITY_MESSAGES[Math.floor(Math.random() * ACCOUNTABILITY_MESSAGES.length)];
+        accountabilityMsg.innerText = randMsg;
+      }
+
+      // Stats card indicators
+      document.getElementById('stat-completed').innerText = state.stats.totalCompletions;
+      document.getElementById('stat-xp-today').innerText = `${state.stats.xpGainedToday} XP`;
+      document.getElementById('stat-blocked').innerText = state.tasks.filter(t => t.status === 'blocked').length;
+      
+      const sessionsBadge = document.getElementById('stat-sessions-today');
+      if (sessionsBadge) {
+        sessionsBadge.innerText = state.stats.sessionsCompletedToday || 0;
+      }
+
+      // Weekly rate: total completions vs total tasks ever created
+      const completedCount = state.stats.totalCompletions;
+      const allHistoricOrActive = Math.max(state.stats.totalCreated, completedCount);
+      let weeklyPercent = 0;
+      if (allHistoricOrActive > 0) {
+        weeklyPercent = Math.round((completedCount / allHistoricOrActive) * 100);
+      }
+      document.getElementById('stat-weekly-rate').innerText = `${weeklyPercent}%`;
+
+      // Render Badges grid
+      renderBadgesCabinet(lvlInfo.level);
+
+      // Re-trigger icons refresh
+      lucide.createIcons();
+    }
+
+    // Render Badge grid logic
+    function renderBadgesCabinet(level) {
+      const container = document.getElementById('badges-grid');
+      container.innerHTML = '';
+
+      let unlockedCount = 0;
+
+      BADGES.forEach(badge => {
+        // Run verification checks
+        const isUnlocked = isBadgeEligible(badge.id, level);
+        if (isUnlocked) unlockedCount++;
+
+        const badgeDiv = document.createElement('div');
+        badgeDiv.className = `w-12 h-12 rounded-xl border flex items-center justify-center relative cursor-help transition-all duration-300 ${
+          isUnlocked 
+            ? `${badge.color} shadow-lg shadow-black/20 hover:scale-110` 
+            : 'border-slate-200 dark:border-slate-850 text-slate-400 dark:text-slate-600 bg-slate-100 dark:bg-slate-900/10 opacity-40'
+        }`;
+        
+        // Icon
+        badgeDiv.innerHTML = `<i data-lucide="${badge.icon}" class="w-6 h-6"></i>`;
+        
+        // Tooltip listeners
+        badgeDiv.addEventListener('mouseenter', (e) => showTooltip(e, badge.title, badge.desc, isUnlocked));
+        badgeDiv.addEventListener('mouseleave', hideTooltip);
+        badgeDiv.addEventListener('mousemove', moveTooltip);
+
+        container.appendChild(badgeDiv);
+      });
+
+      document.getElementById('badge-count-ratio').innerText = `${unlockedCount}/${BADGES.length}`;
+      
+      // Update state for persistent unlocked badges list
+      const oldUnlockedCount = state.unlockedBadges.length;
+      const newUnlockedIds = BADGES.filter(b => isBadgeEligible(b.id, level)).map(b => b.id);
+      
+      if (newUnlockedIds.length > oldUnlockedCount) {
+        // We unlocked a new badge! Trigger event celebration
+        const newlyUnlocked = newUnlockedIds.filter(id => !state.unlockedBadges.includes(id));
+        newlyUnlocked.forEach(id => {
+          const bDetails = BADGES.find(x => x.id === id);
+          triggerBadgeCelebration(bDetails);
+        });
+        state.unlockedBadges = newUnlockedIds;
+        saveState();
+      }
+    }
+
+    function isBadgeEligible(badgeId, level) {
+      const completedList = state.tasks.filter(t => t.status === 'completed');
+      const allCats = new Set([
+        ...state.history.map(h => h.category),
+        ...completedList.map(t => t.category)
+      ]);
+      // Count today's completions
+      const todayStr = getTodayString();
+      const todayCompletions = state.history.filter(h => h.completedAt && h.completedAt.startsWith(todayStr)).length;
+
+      switch (badgeId) {
+        // Starter
+        case 'first_step':        return state.stats.totalCompletions >= 1;
+        case 'hat_trick':         return todayCompletions >= 3;
+        case 'ten_tasks':         return state.stats.totalCompletions >= 10;
+        // Level Ranks
+        case 'squire':            return level >= 3;
+        case 'knight':            return level >= 5;
+        case 'champion':          return level >= 8;
+        case 'wizard':            return level >= 10;
+        case 'archmage':          return level >= 20;
+        // Streaks
+        case 'spark':             return state.streak >= 2;
+        case 'marathon':          return state.streak >= 3;
+        case 'unstoppable':       return state.streak >= 7;
+        case 'iron_will':         return state.streak >= 14;
+        case 'legendary_streak':  return state.streak >= 30;
+        // Volume Milestones
+        case 'fifty_tasks':       return state.stats.totalCompletions >= 50;
+        case 'hundred_tasks':     return state.stats.totalCompletions >= 100;
+        case 'five_hundred':      return state.stats.totalCompletions >= 500;
+        // Quality / Skill
+        case 'early_bird':        return state.stats.onTimeCompletions >= 5;
+        case 'deadline_crusher':  return state.stats.onTimeCompletions >= 25;
+        case 'deep_work':         return state.history.some(h => h.estTime >= 4) || completedList.some(t => t.estTime >= 4);
+        case 'marathon_session':  return state.history.some(h => h.estTime >= 8) || completedList.some(t => t.estTime >= 8);
+        // Category Mastery
+        case 'diverse':           return allCats.size >= 4;
+        case 'polymath':          return allCats.size >= 6;
+        case 'work_master':       return (state.stats.categoriesCompleted['Work'] || 0) >= 20;
+        case 'health_master':     return (state.stats.categoriesCompleted['Health'] || 0) >= 20;
+        case 'study_master':      return (state.stats.categoriesCompleted['Study'] || 0) >= 20;
+        // XP Milestones
+        case 'xp_500':            return state.xp >= 500;
+        case 'xp_2000':           return state.xp >= 2000;
+        default:                  return false;
+      }
+    }
+
+    // Custom Tooltip popover
+    const tooltip = document.getElementById('custom-tooltip');
+    
+    function showTooltip(e, title, desc, unlocked) {
+      tooltip.innerHTML = `
+        <p class="font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-1">
+          <span>${title}</span>
+          ${unlocked ? '<span class="text-[10px] text-emerald-600 dark:text-emerald-450 font-normal ml-2">(Unlocked)</span>' : '<span class="text-[10px] text-slate-400 dark:text-slate-500 font-normal ml-2">(Locked)</span>'}
+        </p>
+        <p class="text-slate-500 dark:text-slate-400 mt-1 font-medium leading-relaxed">${desc}</p>
+      `;
+      tooltip.classList.remove('hidden');
+      moveTooltip(e);
+    }
+
+    function hideTooltip() {
+      tooltip.classList.add('hidden');
+    }
+
+    function moveTooltip(e) {
+      const x = e.clientX + 15;
+      const y = e.clientY + 15;
+      tooltip.style.left = `${x}px`;
+      tooltip.style.top = `${y}px`;
+    }
+
+    // Badge celebration notification toast
+    function triggerBadgeCelebration(badge) {
+      playSound('badge');
+      confetti({
+        particleCount: 80,
+        spread: 60,
+        origin: { y: 0.8 }
+      });
+
+      // Show temporary custom achievement banner in bottom center
+      const alertDiv = document.createElement('div');
+      alertDiv.className = "fixed bottom-20 left-1/2 transform -translate-x-1/2 glass border border-amber-500/30 text-slate-800 dark:text-slate-200 px-6 py-4 rounded-2xl flex items-center space-x-4 shadow-2xl z-50 animate-slide-up transition-all";
+      alertDiv.innerHTML = `
+        <div class="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-500 dark:text-amber-405">
+          <i data-lucide="award" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h4 class="font-bold text-sm tracking-wide text-amber-600 dark:text-amber-400 uppercase">Achievement Unlocked!</h4>
+          <p class="text-xs font-semibold">${badge.title}</p>
+          <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">${badge.desc}</p>
+        </div>
+      `;
+      document.body.appendChild(alertDiv);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        alertDiv.classList.add('opacity-0', 'translate-y-4');
+        setTimeout(() => alertDiv.remove(), 500);
+      }, 5000);
+    }
+
+    // Render columns and card logic
+    function renderAllQuests() {
+      const cols = ['todo', 'in_progress', 'blocked', 'completed'];
+      
+      // Clear containers
+      cols.forEach(col => {
+        document.getElementById(col).innerHTML = '';
+        document.getElementById(`${col}-count`).innerText = 0;
+      });
+
+      // Filter terms
+      const searchVal = document.getElementById('search-input').value.toLowerCase();
+      const filterCat = document.getElementById('filter-category-select').value;
+
+      state.tasks.forEach(task => {
+        // Apply filter checks
+        if (filterCat !== 'ALL' && task.category !== filterCat) return;
+        if (searchVal) {
+          const matchTitle = task.title.toLowerCase().includes(searchVal);
+          const matchDesc = task.description.toLowerCase().includes(searchVal);
+          if (!matchTitle && !matchDesc) return;
+        }
+
+        const container = document.getElementById(task.status);
+        if (!container) return;
+
+        // Card Element Builder
+        const card = document.createElement('div');
+        card.setAttribute('data-id', task.id);
+        
+        let priorityBorder = "border-l-4 border-l-slate-400";
+        if (task.priority === 'Medium') priorityBorder = "border-l-4 border-l-amber-500";
+        else if (task.priority === 'High') priorityBorder = "border-l-4 border-l-red-500";
+        else if (task.priority === 'Low') priorityBorder = "border-l-4 border-l-emerald-500";
+
+        let categoryTagColor = "bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/20";
+        if (task.category === 'Work') categoryTagColor = "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20";
+        else if (task.category === 'Study') categoryTagColor = "bg-purple-500/10 text-purple-650 dark:text-purple-400 border-purple-500/20";
+        else if (task.category === 'Personal') categoryTagColor = "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20";
+        else if (task.category === 'Health') categoryTagColor = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+        else if (task.category === 'Admin') categoryTagColor = "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+
+        // Date overdue calculations
+        let dateHTML = '';
+        if (task.dueDate) {
+          const today = new Date(getTodayString());
+          const due = new Date(task.dueDate);
+          const isOverdue = due < today && task.status !== 'completed';
+          
+          let colorClass = "text-slate-500 dark:text-slate-400";
+          if (isOverdue) colorClass = "text-red-655 dark:text-red-400 font-bold";
+          else if (due.getTime() === today.getTime() && task.status !== 'completed') colorClass = "text-amber-600 dark:text-amber-400 font-bold animate-pulse";
+
+          // Format readable date
+          const dateParts = task.dueDate.split('-');
+          const readableDate = dateParts.length === 3 ? `${dateParts[1]}/${dateParts[2]}` : task.dueDate;
+
+          dateHTML = `
+            <div class="flex items-center space-x-1 ${colorClass}">
+              <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+              <span>${readableDate}</span>
+            </div>
+          `;
+        }
+
+        // Est Time HTML
+        const estHTML = task.estTime 
+          ? `<div class="flex items-center space-x-1 text-slate-550 text-slate-500 dark:text-slate-400">
+               <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+               <span>${task.estTime}h</span>
+             </div>`
+          : '';
+
+        // Complete card styling wrapper
+        card.className = `bg-white dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-800 rounded-xl p-4 shadow-md ${priorityBorder} hover:scale-[1.01] hover:border-slate-300 dark:hover:border-slate-700 transition-all select-none cursor-pointer relative group`;
+        card.innerHTML = `
+          <!-- Title & Badges -->
+          <div class="flex items-start justify-between space-x-2">
+            <span class="text-xs px-2 py-0.5 border rounded-full font-bold uppercase ${categoryTagColor}">${task.category}</span>
+            <div class="flex items-center space-x-2">
+              <span class="text-[10px] font-bold text-brand-555 dark:text-brand-400 font-mono">+${task.xpAwarded} XP</span>
+              ${task.recurring !== 'None' ? '<i data-lucide="repeat" class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" title="Recurring task"></i>' : ''}
+            </div>
+          </div>
+          
+          <h4 class="font-bold text-sm text-slate-850 dark:text-slate-200 mt-2.5 break-words line-clamp-2 leading-relaxed ${task.status === 'completed' ? 'line-through opacity-50' : ''}">${escapeHTML(task.title)}</h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 break-words leading-normal ${task.status === 'completed' ? 'opacity-40' : ''}">${escapeHTML(task.description || '')}</p>
+
+          <!-- Bottom Meta Details -->
+          <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50 text-[11px] font-semibold">
+            <div class="flex items-center space-x-3">
+              ${dateHTML}
+              ${estHTML}
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition duration-200">
+              ${task.status !== 'completed' 
+                ? `<button class="quick-complete-btn p-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 dark:text-emerald-400 hover:text-white border border-emerald-500/20 rounded-md transition" title="Complete Quest" data-id="${task.id}">
+                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                   </button>`
+                : ''}
+            </div>
+          </div>
+        `;
+
+        // Click to view/edit or quick-complete
+        card.addEventListener('click', (e) => {
+          const btn = e.target.closest('.quick-complete-btn');
+          if (btn) {
+            e.stopPropagation();
+            transitionTaskToCompleted(btn.getAttribute('data-id'));
+            return;
+          }
+          openTaskModal(task);
+        });
+
+        container.appendChild(card);
+        
+        // Update column counts
+        const countSpan = document.getElementById(`${task.status}-count`);
+        countSpan.innerText = parseInt(countSpan.innerText) + 1;
+      });
+
+      // Quick-complete button: handled via event delegation on each container
+      // (no querySelectorAll needed — card click handler already stops propagation)
+
+      lucide.createIcons();
+
+      // Re-attach drag-and-drop after every re-render
+      reinitDragAndDrop();
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+
+    // Modal state controllers
+    const modal = document.getElementById('task-modal');
+    const modalCard = document.getElementById('task-modal-card');
+
+    function openTaskModal(task = null) {
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modalCard.classList.remove('scale-95', 'opacity-0');
+      }, 50);
+
+      const titleInput = document.getElementById('task-title');
+      const descInput = document.getElementById('task-desc');
+      const catSelect = document.getElementById('task-category');
+      const prioSelect = document.getElementById('task-priority');
+      const estInput = document.getElementById('task-est-time');
+      const dueInput = document.getElementById('task-due-date');
+      const recSelect = document.getElementById('task-recurring');
+      const idInput = document.getElementById('modal-task-id');
+
+      const modalTitleEl = document.getElementById('modal-title');
+      const saveBtn = document.getElementById('save-task-btn');
+      const deleteBtn = document.getElementById('delete-task-btn');
+      const quickCompleteBtn = document.getElementById('quick-complete-modal-btn');
+
+      if (task) {
+        // Edit mode
+        modalTitleEl.innerText = "Modify Active Quest";
+        saveBtn.innerText = "Update Quest";
+        deleteBtn.classList.remove('hidden');
+        
+        idInput.value = task.id;
+        titleInput.value = task.title;
+        descInput.value = task.description || '';
+        catSelect.value = task.category;
+        prioSelect.value = task.priority;
+        estInput.value = task.estTime || '';
+        dueInput.value = task.dueDate || '';
+        recSelect.value = task.recurring;
+
+        if (task.status !== 'completed') {
+          quickCompleteBtn.classList.remove('hidden');
+        } else {
+          quickCompleteBtn.classList.add('hidden');
+        }
+      } else {
+        // Create mode
+        modalTitleEl.innerText = "New Quest Blueprint";
+        saveBtn.innerText = "Launch Quest";
+        deleteBtn.classList.add('hidden');
+        quickCompleteBtn.classList.add('hidden');
+
+        idInput.value = '';
+        document.getElementById('task-form').reset();
+        dueInput.value = getTodayString(); // default to today
+      }
+
+      titleInput.focus();
+    }
+
+    function closeTaskModal() {
+      modalCard.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    // Create / edit submission
+    document.getElementById('task-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const id = document.getElementById('modal-task-id').value;
+      const title = document.getElementById('task-title').value;
+      const description = document.getElementById('task-desc').value;
+      const category = document.getElementById('task-category').value;
+      const priority = document.getElementById('task-priority').value;
+      const estTime = parseFloat(document.getElementById('task-est-time').value) || 0;
+      const dueDate = document.getElementById('task-due-date').value;
+      const recurring = document.getElementById('task-recurring').value;
+
+      let targetTask;
+      if (id) {
+        // Edit existing
+        targetTask = state.tasks.find(t => t.id === id);
+        if (targetTask) {
+          targetTask.title = title;
+          targetTask.description = description;
+          targetTask.category = category;
+          targetTask.priority = priority;
+          targetTask.estTime = estTime;
+          targetTask.dueDate = dueDate;
+          targetTask.recurring = recurring;
+          
+          // Re-calculate projected XP in case priority changes
+          targetTask.xpAwarded = calculateXPAward(targetTask).total;
+        }
+      } else {
+        // Create new task structure
+        const newTask = {
+          id: Date.now().toString(),
+          title,
+          description,
+          category,
+          priority,
+          estTime,
+          dueDate,
+          recurring,
+          status: 'todo',
+          createdAt: new Date().toISOString(),
+          completedAt: null,
+          xpAwarded: 0
+        };
+        newTask.xpAwarded = calculateXPAward(newTask).total;
+        state.tasks.push(newTask);
+        state.stats.totalCreated++;
+      }
+
+      saveState();
+      renderAllQuests();
+      updateDashboardUI();
+      closeTaskModal();
+    });
+
+    // Delete task logic
+    document.getElementById('delete-task-btn').addEventListener('click', () => {
+      const id = document.getElementById('modal-task-id').value;
+      if (!id) return;
+      
+      if (confirm("Are you sure you want to abandon this quest blueprint?")) {
+        state.tasks = state.tasks.filter(t => t.id !== id);
+        saveState();
+        renderAllQuests();
+        updateDashboardUI();
+        closeTaskModal();
+      }
+    });
+
+    // Complete task from within edit modal
+    document.getElementById('quick-complete-modal-btn').addEventListener('click', () => {
+      const id = document.getElementById('modal-task-id').value;
+      if (!id) return;
+      closeTaskModal();
+      transitionTaskToCompleted(id);
+    });
+
+    // Core task completion sequence
+    function transitionTaskToCompleted(id) {
+      const task = state.tasks.find(t => t.id === id);
+      if (!task || task.status === 'completed') return;
+
+      // Update completion dates / streaks
+      const todayStr = getTodayString();
+      const yesterdayStr = getYesterdayString();
+
+      // Check daily streak incrementation
+      if (state.lastCompletedDate === yesterdayStr) {
+        state.streak += 1;
+      } else if (state.lastCompletedDate !== todayStr) {
+        state.streak = 1; // start new streak
+      }
+      state.lastCompletedDate = todayStr;
+
+      // Calculate XP
+      const xpReport = calculateXPAward(task);
+      const gainedXP = xpReport.total;
+      
+      const oldXP = state.xp;
+      state.xp += gainedXP;
+      state.stats.xpGainedToday += gainedXP;
+      state.stats.totalCompletions++;
+
+      // Category count increments
+      if (!state.stats.categoriesCompleted[task.category]) {
+        state.stats.categoriesCompleted[task.category] = 0;
+      }
+      state.stats.categoriesCompleted[task.category]++;
+
+      // On-time check
+      if (task.dueDate) {
+        const due = new Date(task.dueDate + 'T23:59:59');
+        if (new Date() <= due) {
+          state.stats.onTimeCompletions++;
+        }
+      }
+
+      // Record logs
+      const logEntry = {
+        id: task.id,
+        title: task.title,
+        category: task.category,
+        estTime: task.estTime,
+        completedAt: new Date().toISOString(),
+        xpEarned: gainedXP
+      };
+      state.history.unshift(logEntry);
+
+      // Confetti & sounds
+      playSound('completion');
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.8 }
+      });
+
+      // Visual Toast Notification popup
+      triggerCelebratoryToast(task.title, gainedXP);
+
+      // Handle recurring logic or status update
+      if (task.recurring === 'Daily' || task.recurring === 'Weekly') {
+        // Recurring tasks reset back to todo.
+        task.status = 'todo';
+        task.completedAt = null;
+      } else {
+        task.status = 'completed';
+        task.completedAt = new Date().toISOString();
+      }
+
+      // Check level-up threshold trigger
+      const oldLvl = Math.floor(oldXP / 150) + 1;
+      const newLvl = Math.floor(state.xp / 150) + 1;
+      
+      if (newLvl > oldLvl) {
+        setTimeout(() => {
+          triggerLevelUpCelebration(newLvl);
+        }, 800);
+      }
+
+      saveState();
+      renderAllQuests();
+      updateDashboardUI();
+    }
+
+    function triggerCelebratoryToast(title, xp) {
+      const toast = document.createElement('div');
+      toast.className = "fixed bottom-6 left-6 glass border border-emerald-500/30 text-slate-800 dark:text-slate-100 p-4 rounded-xl flex items-center justify-between shadow-2xl z-50 animate-slide-up max-w-sm w-full";
+      
+      // Random productivity tip/quote
+      const randTip = PRODUCTIVITY_TIPS[Math.floor(Math.random() * PRODUCTIVITY_TIPS.length)];
+      
+      toast.innerHTML = `
+        <div class="flex items-start space-x-3">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-500 dark:text-emerald-400 shrink-0">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-emerald-600 dark:text-emerald-400">+${xp} XP Awarded!</p>
+            <p class="text-[11px] font-medium line-clamp-1">${title}</p>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 italic mt-1 font-medium">${randTip}</p>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-x-4');
+        setTimeout(() => toast.remove(), 400);
+      }, 5500);
+    }
+
+    // Level-up celebration modal
+    const lvlUpModal = document.getElementById('level-up-modal');
+    
+    function triggerLevelUpCelebration(newLvl) {
+      playSound('level_up');
+      
+      // Giant double confetti blast
+      const end = Date.now() + (2 * 1000);
+      const colors = ['#8b5cf6', '#3b82f6', '#f59e0b', '#ec4899'];
+
+      (function frame() {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: colors
+        });
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: colors
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      }());
+
+      const randQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+      
+      // Update avatar details
+      let rankEmoji = "👶";
+      for (const r of RANK_TITLES) {
+        if (newLvl <= r.maxLvl) {
+          rankEmoji = r.emoji;
+          break;
+        }
+      }
+
+      document.getElementById('level-up-avatar').innerText = rankEmoji;
+      document.getElementById('level-up-subtitle').innerText = `You reached Level ${newLvl}!`;
+      document.getElementById('level-up-quote').innerText = `"${randQuote.text}" — ${randQuote.author}`;
+      
+      lvlUpModal.classList.remove('hidden');
+    }
+
+    document.getElementById('close-level-up-btn').addEventListener('click', () => {
+      lvlUpModal.classList.add('hidden');
+    });
+
+    // History Log Drawer toggles
+    const historyDrawer = document.getElementById('history-drawer');
+    
+    document.getElementById('toggle-history-btn').addEventListener('click', () => {
+      renderHistoryLogs();
+      historyDrawer.classList.remove('translate-x-full');
+    });
+
+    document.getElementById('close-history-btn').addEventListener('click', () => {
+      historyDrawer.classList.add('translate-x-full');
+    });
+
+    function renderHistoryLogs() {
+      const container = document.getElementById('history-logs-container');
+      container.innerHTML = '';
+
+      if (state.history.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-slate-500">
+            <i data-lucide="folder-open" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+            <p class="text-sm font-semibold">No finished quests logged yet.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      state.history.forEach(log => {
+        const item = document.createElement('div');
+        item.className = "p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-205 dark:border-slate-800 rounded-xl flex justify-between items-start space-x-3";
+        
+        const date = new Date(log.completedAt);
+        const formatTime = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        item.innerHTML = `
+          <div class="min-w-0">
+            <h5 class="font-bold text-xs text-slate-800 dark:text-slate-200 break-words leading-relaxed">${escapeHTML(log.title)}</h5>
+            <div class="flex items-center space-x-2 mt-1 text-[10px] text-slate-500 font-semibold">
+              <span class="px-1.5 py-0.2 bg-slate-200 dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-700/50 uppercase">${log.category}</span>
+              <span>${formatTime}</span>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="text-xs font-black text-brand-655 dark:text-brand-400 font-mono">+${log.xpEarned} XP</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    // Wipe logs
+    document.getElementById('clear-history-btn').addEventListener('click', () => {
+      if (confirm("Are you sure you want to wipe completion history? This will NOT reset your levels or XP, but logs will be emptied.")) {
+        state.history = [];
+        saveState();
+        renderHistoryLogs();
+      }
+    });
+
+    // Theme Toggle Listener
+    document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
+
+    // Search and category change lists
+    document.getElementById('search-input').addEventListener('input', renderAllQuests);
+    document.getElementById('filter-category-select').addEventListener('change', renderAllQuests);
+    
+    // Add Quest actions
+    document.getElementById('add-task-btn').addEventListener('click', () => openTaskModal());
+    document.getElementById('close-modal-btn').addEventListener('click', closeTaskModal);
+
+    // Sidebar triggers (Mobile)
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+    function toggleMobileSidebar(open) {
+      if (open) {
+        sidebar.classList.remove('-translate-x-full');
+        sidebarOverlay.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        sidebarOverlay.classList.add('hidden');
+      }
+    }
+
+    mobileMenuBtn.addEventListener('click', () => toggleMobileSidebar(true));
+    closeSidebarBtn.addEventListener('click', () => toggleMobileSidebar(false));
+    sidebarOverlay.addEventListener('click', () => toggleMobileSidebar(false));
+
+    // ── Drag and Drop: store instances so they can be destroyed on re-render
+    let _sortableInstances = [];
+
+    function reinitDragAndDrop() {
+      // Destroy existing instances to prevent stale event listeners
+      _sortableInstances.forEach(s => s.destroy());
+      _sortableInstances = [];
+
+      const cols = ['todo', 'in_progress', 'blocked', 'completed'];
+      cols.forEach(colId => {
+        const el = document.getElementById(colId);
+        const instance = Sortable.create(el, {
+          group: 'kanban',
+          animation: 180,
+          ghostClass: 'sortable-ghost',
+          dragClass: 'sortable-drag',
+          onEnd: function (evt) {
+            const taskId = evt.item.getAttribute('data-id');
+            const newStatus = evt.to.id;
+
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const oldStatus = task.status;
+            if (oldStatus === newStatus) return; // no change
+
+            if (newStatus === 'completed') {
+              evt.item.remove();
+              transitionTaskToCompleted(taskId);
+            } else {
+              if (oldStatus === 'completed') {
+                const xpDeduct = task.xpAwarded;
+                state.xp = Math.max(0, state.xp - xpDeduct);
+                state.stats.xpGainedToday = Math.max(0, state.stats.xpGainedToday - xpDeduct);
+                state.stats.totalCompletions = Math.max(0, state.stats.totalCompletions - 1);
+                state.history = state.history.filter(h => h.id !== taskId);
+                if (state.stats.categoriesCompleted[task.category]) {
+                  state.stats.categoriesCompleted[task.category] = Math.max(0, state.stats.categoriesCompleted[task.category] - 1);
+                }
+              }
+              task.status = newStatus;
+              task.completedAt = null;
+              saveState();
+              renderAllQuests();
+              updateDashboardUI();
+            }
+          }
+        });
+        _sortableInstances.push(instance);
+      });
+    }
+
+    // Dev Cheat details
+    function devAddXP() {
+      const oldXP = state.xp;
+      state.xp += 50;
+      state.stats.xpGainedToday += 50;
+      
+      const oldLvl = Math.floor(oldXP / 150) + 1;
+      const newLvl = Math.floor(state.xp / 150) + 1;
+      
+      if (newLvl > oldLvl) {
+        triggerLevelUpCelebration(newLvl);
+      }
+      
+      saveState();
+      updateDashboardUI();
+    }
+
+    // Backup & Restore Actions
+    document.getElementById('export-btn').addEventListener('click', () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `questboard_backup_${getTodayString()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    });
+
+    const fileInput = document.getElementById('import-file-input');
+    document.getElementById('import-btn').addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const importedState = JSON.parse(evt.target.result);
+          if (importedState.tasks && Array.isArray(importedState.tasks)) {
+            state = importedState;
+            saveState();
+            loadState();
+            alert("Database restored successfully!");
+          } else {
+            alert("Invalid backup file structure.");
+          }
+        } catch (err) {
+          alert("Error parsing file: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // (File Sync button removed)
+
+    // Clear Completed Tasks
+    document.getElementById('clear-completed-btn').addEventListener('click', () => {
+      const completedCount = state.tasks.filter(t => t.status === 'completed').length;
+      if (completedCount === 0) return;
+      if (confirm(`Are you sure you want to permanently delete all ${completedCount} completed tasks?`)) {
+        state.tasks = state.tasks.filter(t => t.status !== 'completed');
+        saveState();
+        renderAllQuests();
+        updateDashboardUI();
+      }
+    });
+
+    // Reset Database
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      if (confirm("DANGER: This will completely reset your database and clear your levels, streaks, achievements, and tasks. Do you want to continue?")) {
+        localStorage.removeItem('questboard_state');
+        // Reset local variables
+        state = {
+          tasks: [],
+          xp: 0,
+          streak: 0,
+          lastCompletedDate: null,
+          unlockedBadges: [],
+          history: [],
+          stats: {
+            totalCompletions: 0,
+            totalCreated: 0,
+            onTimeCompletions: 0,
+            categoriesCompleted: { Work: 0, Study: 0, Personal: 0, Health: 0, Admin: 0, Other: 0 },
+            xpGainedToday: 0,
+            sessionsCompletedToday: 0,
+            lastActiveDate: null
+          },
+          theme: 'dark'
+        };
+        initializeMockData();
+        loadState();
+      }
+    });
+
+    // Rotating motivational quotes
+    document.getElementById('refresh-quote-btn').addEventListener('click', () => {
+      rotateQuote();
+    });
+
+    function rotateQuote() {
+      const currentText = document.getElementById('motivational-quote').innerText;
+      let nextQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+      
+      // avoid pick duplicate immediately
+      while (`"${nextQuote.text}"` === currentText) {
+        nextQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+      }
+
+      document.getElementById('motivational-quote').innerText = `"${nextQuote.text}"`;
+      document.getElementById('motivational-author').innerText = `— ${nextQuote.author}`;
+    }
+
+    // Live clock timer
+    function startLiveTime() {
+      const el = document.getElementById('live-time');
+      const dateEl = document.getElementById('current-date-str');
+      
+      function update() {
+        const now = new Date();
+        
+        // Time standard format
+        let hours = now.getHours();
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // 0 should be 12
+        el.innerText = `${hours}:${minutes} ${ampm}`;
+
+        // Date standard format
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        dateEl.innerText = now.toLocaleDateString('en-US', options);
+      }
+      
+      update();
+      setInterval(update, 30000); // refresh every 30s
+    }
+
+    // Study Timer Logic
+    let timerInterval = null;
+    let timerMode = 'study'; // 'study' or 'break'
+    const STUDY_DURATION_SEC = 50 * 60; // 50 mins
+    const BREAK_DURATION_SEC = 10 * 60; // 10 mins
+    let currentDurationSec = STUDY_DURATION_SEC;
+    let timerRemaining = currentDurationSec;
+    
+    const timerDisplay = document.getElementById('timer-display');
+    const playBtn = document.getElementById('timer-play-btn');
+    const pauseBtn = document.getElementById('timer-pause-btn');
+    const stopBtn = document.getElementById('timer-stop-btn');
+
+    timerDisplay.addEventListener('click', () => {
+      if (timerMode === 'break' || timerRemaining < currentDurationSec) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerMode = 'study';
+        currentDurationSec = STUDY_DURATION_SEC;
+        timerRemaining = currentDurationSec;
+        pauseBtn.classList.add('hidden');
+        playBtn.classList.remove('hidden');
+        timerDisplay.classList.remove('text-emerald-500', 'dark:text-emerald-400');
+        timerDisplay.classList.add('text-brand-600', 'dark:text-brand-400');
+        updateTimerDisplay();
+      }
+    });
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(timerRemaining / 60);
+      const secs = timerRemaining % 60;
+      timerDisplay.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    let expectedEndTime = null;
+
+    playBtn.addEventListener('click', () => {
+      if (timerInterval) return;
+      playBtn.classList.add('hidden');
+      pauseBtn.classList.remove('hidden');
+      
+      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
+
+      expectedEndTime = Date.now() + (timerRemaining * 1000);
+      
+      timerInterval = setInterval(() => {
+        timerRemaining = Math.round((expectedEndTime - Date.now()) / 1000);
+        
+        if (timerRemaining <= 0) {
+          timerRemaining = 0;
+          updateTimerDisplay();
+          handleTimerStop(true);
+        } else {
+          updateTimerDisplay();
+        }
+      }, 1000);
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      pauseBtn.classList.add('hidden');
+      playBtn.classList.remove('hidden');
+    });
+
+    stopBtn.addEventListener('click', () => {
+      if (timerRemaining === currentDurationSec) return; // Didn't start
+      handleTimerStop(false);
+    });
+
+    function triggerAlarm(message) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        for (let i = 0; i < 3; i++) {
+          const osc = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          osc.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, ctx.currentTime + i * 0.4);
+          gainNode.gain.setValueAtTime(0, ctx.currentTime + i * 0.4);
+          gainNode.gain.linearRampToValueAtTime(1, ctx.currentTime + i * 0.4 + 0.1);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.4 + 0.3);
+          osc.start(ctx.currentTime + i * 0.4);
+          osc.stop(ctx.currentTime + i * 0.4 + 0.3);
+        }
+      } catch (e) {
+        console.log("Audio play failed", e);
+      }
+
+      if (Notification.permission === 'granted') {
+        new Notification('QuestBoard Timer', { body: message });
+      }
+
+      setTimeout(() => alert(message), 300);
+    }
+
+    function handleTimerStop(completed) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      pauseBtn.classList.add('hidden');
+      playBtn.classList.remove('hidden');
+      
+      const elapsedSec = currentDurationSec - timerRemaining;
+      const elapsedMins = Math.floor(elapsedSec / 60);
+      
+      if (timerMode === 'study') {
+        let xpEarned = elapsedMins; // 1 XP per minute
+        if (completed) {
+          xpEarned += 10; // Bonus for finishing full 50 mins
+          state.stats.sessionsCompletedToday = (state.stats.sessionsCompletedToday || 0) + 1;
+          triggerAlarm("You earned a break! The timer is now set to 10 minutes.");
+        }
+        
+        if (xpEarned > 0) {
+          const oldXP = state.xp;
+          state.xp += xpEarned;
+          state.stats.xpGainedToday += xpEarned;
+          
+          triggerCelebratoryToast("Study Session Complete", xpEarned);
+          const oldLvl = Math.floor(oldXP / 150) + 1;
+          const newLvl = Math.floor(state.xp / 150) + 1;
+          if (newLvl > oldLvl) {
+            setTimeout(() => {
+              triggerLevelUpCelebration(newLvl);
+            }, 800);
+          }
+          
+          saveState();
+          updateDashboardUI();
+        }
+        
+        if (completed) {
+          timerMode = 'break';
+          currentDurationSec = BREAK_DURATION_SEC;
+          timerDisplay.classList.remove('text-brand-600', 'dark:text-brand-400');
+          timerDisplay.classList.add('text-emerald-500', 'dark:text-emerald-400');
+        } else {
+          timerMode = 'study';
+          currentDurationSec = STUDY_DURATION_SEC;
+        }
+      } else {
+        // Break mode ended
+        if (completed) {
+          triggerCelebratoryToast("Break Over", 0);
+          triggerAlarm("Break is over! Ready to start a new session?");
+        }
+        timerMode = 'study';
+        currentDurationSec = STUDY_DURATION_SEC;
+        timerDisplay.classList.remove('text-emerald-500', 'dark:text-emerald-400');
+        timerDisplay.classList.add('text-brand-600', 'dark:text-brand-400');
+      }
+      
+      // Reset Timer
+      timerRemaining = currentDurationSec;
+      updateTimerDisplay();
+    }
+
+    // ── Persistence: save on tab hide / laptop lid close / shutdown
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveState();
+    });
+    window.addEventListener('pagehide', saveState);
+
+    // ── Prevent accidental window close — show confirm dialog instead
+    window.addEventListener('beforeunload', (e) => {
+      saveState(); // always save first
+      e.preventDefault();
+      e.returnValue = 'QuestBoard is running! Your data is saved. Are you sure you want to close?';
+      return e.returnValue;
+    });
+
+    // Keyboard Shortcuts bindings
+    window.addEventListener('keydown', (e) => {
+      // Ignore shortcuts when user typing in text fields
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT') {
+        // Esc key handles blur from inputs or close modal
+        if (e.key === 'Escape') {
+          document.activeElement.blur();
+          closeTaskModal();
+          historyDrawer.classList.add('translate-x-full');
+        }
+        return;
+      }
+
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        openTaskModal();
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        document.getElementById('search-input').focus();
+      }
+
+      if (e.key === 'Escape') {
+        closeTaskModal();
+        historyDrawer.classList.add('translate-x-full');
+      }
+    });
+
+    // PWA Install Prompt Listener
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const installBtn = document.getElementById('install-pwa-btn');
+      if (installBtn) installBtn.classList.remove('hidden');
+    });
+
+    const installBtn = document.getElementById('install-pwa-btn');
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          installBtn.classList.add('hidden');
+        }
+        deferredPrompt = null;
+      });
+    }
+
+    // Register simple Service Worker for PWA install eligibility (using blob to stay self-contained)
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', e => self.skipWaiting());
+        self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
+      `;
+      const blob = new Blob([swCode], {type: 'application/javascript'});
+      navigator.serviceWorker.register(URL.createObjectURL(blob))
+        .catch(err => console.log('SW registration failed:', err));
+    }
+
+    // Run app initialization on window load
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadState();
+      startLiveTime();
+      reinitDragAndDrop(); // initial drag-drop setup
+      rotateQuote();
+    });
+  </script>
+</body>
+</html>
